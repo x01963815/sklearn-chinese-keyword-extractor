@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 import re
+import six
 from collections import OrderedDict
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import CountVectorizer
@@ -55,7 +56,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
             return get_keyword_label(X)
         
         # Input validation, only accept 1 dim and str
-        X = check_array(X, ensure_2d=False, dtype=str)
+        X = check_array(X, ensure_2d=False, dtype=six.string_types)
         labels = np.stack(list(map(get_keyword_label, X)))
         
         return labels
@@ -138,9 +139,11 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         # Make sure that output has same shape
         keyword_result = np.pad(data['keyword'], 
                                 (0, self.n_keyword - data.shape[0]),
+                                mode='constant',
                                 constant_values='')
         gain_value_result = np.pad(data['gain_value'], 
                                    (0, self.n_keyword - data.shape[0]), 
+                                   mode='constant',
                                    constant_values=0)        
         
         

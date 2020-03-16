@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import re
 import six
+from string import ascii_letters
 from collections import OrderedDict
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import CountVectorizer
@@ -12,23 +13,30 @@ from sklearn.utils.validation import check_is_fitted, check_array
 
 
 class KeywordExtractor(BaseEstimator, TransformerMixin):
-    def __init__(self, min_keyword_len=2, 
+    def __init__(self, 
+                 min_ch_keyword_len=2, 
+                 min_en_keyword_len=3,
                  n_keyword=5, ngram_range=(0,10),
                  regex_pattern=r'[a-zA-Z0-9~!@#$%^&*()_&#43;\-\+=,.'
-                           '<>?\|/ \[\]\-"\　０-\９（）？【】]'):
+                           '<>?\|/ \[\]\-"\　０-\９（）？【】]',
+                 enable_english=True,
+                 to_lowercase=False):
         '''
         '''
-        self.min_keyword_len = min_keyword_len
+        self.min_ch_keyword_len = min_ch_keyword_len
+        self.min_en_keyword_len = min_en_keyword_len
         self.n_keyword = n_keyword
         self.regex_pattern = regex_pattern
         self.ngram_range = ngram_range
+        self.enable_english = enable_english
+        self.to_lowercase = to_lowercase
         
     
     def fit(self, X, y=None):
         '''
         '''
         
-        corpus = list(map(self._string_modify, set(X)))
+        corpus = list(map(self._modify_string, set(X)))
         
         vectorizer = CountVectorizer(ngram_range=self.ngram_range, 
                                      analyzer='char')
@@ -82,18 +90,45 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         self.fit(X) 
         return self.transform(X)
     
-    def _string_modify(self, string):     
-        modified = re.sub(self.regex_pattern , '', string)
+    def _modify_string(self, string):
+        modified_string = string
         
-        return modified
+        if self.to_lowercase:
+            modified_string = modified_string.lower()
+
+        modified_string = modified_string.strip()
+        return modified_string
     
-    
-    def _parse_string(self, string):
+    def _split_string(self, string):       
+        string = self._modify_string(string)
         
-        string = self._string_modify(string)
+        if not string:
+            return ['']
+        
+        if self.enable_english:
+            pattern = r"[\u4e00-\u9fa5]+|[a-zA-Z]+"
+        else:
+            pattern = r"[\u4e00-\u9fa5]+"
+            
+        return re.findall(pattern, string, re.UNICODE)
+        
+    
+    def _parse_en_substring(self, substring):
+        
+        if len(substring) >= self.min_en_keyword_len:
+            keywords_fltr = np.array([substring])
+            gain_value_fltr = np.array([self.keywords_components_
+                                            .get(substring, 0)])
+        else:
+            keywords_fltr = np.array([], dtype='U32')
+            gain_value_fltr = np.array([], dtype=int)
+        
+        return keywords_fltr, gain_value_fltr
+    
+    def _parse_ch_substring(self, substring):
         
         # Pascal Structure
-        len_str = max(len(string), 1) # min 1, prevent empty string
+        len_str = max(len(substring), 1) # min 1, prevent empty string
         start_position = np.tril(np.indices((len_str,len_str))[1])    
         end_position = sum(map(
             lambda x: np.eye(len_str, k=x, dtype=int) * (len_str + x), 
@@ -101,7 +136,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         slices = np.stack([start_position, end_position], axis=2)
         
         keywords = np.apply_along_axis(
-            func1d=lambda x: string[x[0]:x[1]], 
+            func1d=lambda x: substring[x[0]:x[1]], 
             axis=2, 
             arr=slices)
         
@@ -125,15 +160,35 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         
         filter_mask = (
             (gain_value > 0) 
-            & (np.char.str_len(keywords) >= self.min_keyword_len))
+            & (np.char.str_len(keywords) >= self.min_ch_keyword_len))
         
         keywords_fltr = keywords[filter_mask]
         gain_value_fltr = gain_value[filter_mask]
         
+        return keywords_fltr, gain_value_fltr
+    
+    
+    def _parse_string(self, string):
+        
+        substring_list = self._split_string(string)
+        
+        keywords = np.array([], dtype='U32')
+        gain_values = np.array([], dtype=int)
+        for substr in substring_list:
+            if not substr: continue
+            
+            if substr[0] in ascii_letters:
+                keyword, gain_value = self._parse_en_substring(substr)
+            else:
+                keyword, gain_value = self._parse_ch_substring(substr)
+            
+            keywords = np.concatenate([keywords, keyword])
+            gain_values = np.concatenate([gain_values, gain_value])
+            
+        
         # Sort by gain_value
         dtype = [('keyword', 'U32'), ('gain_value', int)]
-        data = np.array(list(zip(keywords_fltr, gain_value_fltr)),
-                        dtype=dtype)
+        data = np.array(list(zip(keywords, gain_values)), dtype=dtype)
         data = np.sort(data, order='gain_value')[::-1][0:self.n_keyword]
         
         # Make sure that output has same shape
@@ -144,7 +199,6 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         gain_value_result = np.pad(data['gain_value'], 
                                    (0, self.n_keyword - data.shape[0]), 
                                    mode='constant',
-                                   constant_values=0)        
-        
+                                   constant_values=0)  
         
         return keyword_result, gain_value_result

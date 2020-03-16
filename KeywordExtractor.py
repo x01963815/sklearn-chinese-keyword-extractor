@@ -14,19 +14,16 @@ from sklearn.utils.validation import check_is_fitted, check_array
 
 class KeywordExtractor(BaseEstimator, TransformerMixin):
     def __init__(self, 
+                 n_keyword=5, ngram_range=(0,10),
                  min_ch_keyword_len=2, 
                  min_en_keyword_len=3,
-                 n_keyword=5, ngram_range=(0,10),
-                 regex_pattern=r'[a-zA-Z0-9~!@#$%^&*()_&#43;\-\+=,.'
-                           '<>?\|/ \[\]\-"\　０-\９（）？【】]',
                  enable_english=True,
                  to_lowercase=False):
         '''
         '''
+        self.n_keyword = n_keyword
         self.min_ch_keyword_len = min_ch_keyword_len
         self.min_en_keyword_len = min_en_keyword_len
-        self.n_keyword = n_keyword
-        self.regex_pattern = regex_pattern
         self.ngram_range = ngram_range
         self.enable_english = enable_english
         self.to_lowercase = to_lowercase
@@ -36,10 +33,11 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         '''
         '''
         
-        corpus = list(map(self._modify_string, set(X)))
+        corpus = set(X)
         
         vectorizer = CountVectorizer(ngram_range=self.ngram_range, 
-                                     analyzer='char')
+                                     analyzer='char',
+                                     lowercase=self.to_lowercase)
         
         corpus_vec = vectorizer.fit_transform(corpus)
                

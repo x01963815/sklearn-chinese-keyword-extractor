@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
 import numpy as np
 import pandas as pd
 import re
@@ -58,7 +59,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         get_keyword_label = lambda s: self._parse_string(s)[0]
         
         # Input is str
-        if isinstance(X, str):
+        if isinstance(X, six.string_types):
             return get_keyword_label(X)
         
         # Input validation, only accept 1 dim and str
@@ -75,11 +76,11 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         get_gainvalue = lambda s: self._parse_string(s)[1]
         
         # Input is str
-        if isinstance(X, str):
+        if isinstance(X, six.string_types):
             return get_gainvalue(X)
         
         # Input validation, only accept 1 dim and str
-        X = check_array(X, ensure_2d=False, dtype=str)
+        X = check_array(X, ensure_2d=False, dtype=six.string_types)
         gainvalues = np.stack(list(map(get_gainvalue, X)))
         
         return gainvalues

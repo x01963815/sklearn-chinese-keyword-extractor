@@ -34,7 +34,8 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         '''
         '''
         
-        corpus = set(X)
+        corpus = list(map(lambda s: ''.join(self._split_string(s)),
+                          set(X)))
         
         vectorizer = CountVectorizer(ngram_range=self.ngram_range, 
                                      analyzer='char',
@@ -48,7 +49,6 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         ))
         # a lot of useless emtpy string, set to 0
         self.keywords_components_[''] = 0  
-        
         return self
     
     def transform(self, X):
@@ -65,7 +65,6 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         # Input validation, only accept 1 dim and str
         X = check_array(X, ensure_2d=False, dtype=six.string_types)
         labels = np.stack(list(map(get_keyword_label, X)))
-        
         return labels
     
     def transform_proba(self, X):
@@ -82,12 +81,13 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         # Input validation, only accept 1 dim and str
         X = check_array(X, ensure_2d=False, dtype=six.string_types)
         gainvalues = np.stack(list(map(get_gainvalue, X)))
-        
         return gainvalues
+    
     
     def fit_transform(self, X, y=None):
         self.fit(X) 
         return self.transform(X)
+    
     
     def _modify_string(self, string):
         modified_string = string
@@ -97,6 +97,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
 
         modified_string = modified_string.strip()
         return modified_string
+    
     
     def _split_string(self, string):       
         string = self._modify_string(string)
@@ -123,6 +124,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
             gain_value_fltr = np.array([], dtype=int)
         
         return keywords_fltr, gain_value_fltr
+    
     
     def _parse_ch_substring(self, substring):
         

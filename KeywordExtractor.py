@@ -291,6 +291,12 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
             keywords = np.concatenate([keywords, keyword])
             gain_values = np.concatenate([gain_values, gain_value])   
         
+        
+        # bug/fix-duplicated-keyword
+        _, dupli_idx = np.unique(keywords, return_index=True)
+        keywords = keywords[dupli_idx]
+        gain_values = gain_values[dupli_idx]       
+        
         # Sort by gain_value
         dtype = [('keyword', 'U32'), ('gain_value', int)]
         data = np.array(list(zip(keywords, gain_values)), dtype=dtype)

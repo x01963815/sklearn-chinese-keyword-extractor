@@ -3,3 +3,4 @@ KeywordExtractor_pandas_version.pyc
 KeywordExtractor.pyc
 __init__.pyc
 __pycache__/
+.ipynb_checkpoints/

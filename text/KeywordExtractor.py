@@ -19,7 +19,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
     The model will process a brute-force search algorithm to find the 
     most repeated substrings in a string. The substrings are defined as
     keywords. The frequency of a keyword will be calibrated by its 
-    parental string.
+    parental strings.
 
 
     Parameters

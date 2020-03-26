@@ -61,7 +61,8 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
                  min_ch_keyword_len=2, 
                  min_en_keyword_len=3,
                  enable_english=True,
-                 to_lowercase=False):
+                 to_lowercase=False, 
+                 max_parent=False):
 
         self.n_keyword = n_keyword
         self.min_ch_keyword_len = min_ch_keyword_len
@@ -69,6 +70,7 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
         self.ngram_range = ngram_range
         self.enable_english = enable_english
         self.to_lowercase = to_lowercase
+        self.max_parent = max_parent
         
     
     def fit(self, X, y=None):
@@ -262,7 +264,13 @@ class KeywordExtractor(BaseEstimator, TransformerMixin):
                                    mode='constant', 
                                    constant_values=0)[:-1, 1:]
         
-        gain_value = keywords_val - left_parents_val - right_parents_val
+        if self.max_parent:
+            gain_value = keywords_val - np.where(
+                                            left_parents_val>right_parents_val,
+                                            left_parents_val, right_parents_val)
+        else:
+            gain_value = keywords_val - left_parents_val - right_parents_val
+            
         
         filter_mask = (
             (gain_value > 0) 

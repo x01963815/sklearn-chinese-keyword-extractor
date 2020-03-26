@@ -146,3 +146,14 @@ def test_empty_input():
         result,
         np.array(['', '', '', '', ''])
     )
+    
+    
+def test_max_parent():
+    ke = KeywordExtractor(max_parent=True)
+    ke.fit(data)
+    test_string = '【白蘭】含熊寶貝馨香精華花漾清新洗衣粉4.25kg' 
+    result = ke.transform(test_string)
+    assert_array_equal(
+        result,
+        np.array(['白蘭', '洗衣', '馨香', '熊寶貝', '洗衣粉'])
+    )
